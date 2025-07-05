@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/docs-to-text@latest/dist/docsToText.min.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Link Extractor & Sequential Opener</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            margin-bottom: 15px;
+            padding: 10px;
+            font-family: monospace;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        input[type="text"], input[type="url"], input[type="number"] {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        input[type="url"] {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .control-group {
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .small-button {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        #status {
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #f8f8f8;
+            border-left: 4px solid #4CAF50;
+        }
+        .link-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-top: 15px;
+        }
+        .link-item {
+            padding: 8px;
+            margin: 5px 0;
+            background-color: #f5f5f5;
+            border-left: 3px solid #ccc;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .link-text {
+            word-break: break-all;
+            flex-grow: 1;
+        }
+        .link-actions {
+            flex-shrink: 0;
+            margin-left: 10px;
+            white-space: nowrap;
+        }
+        .link-item button {
+            padding: 3px 8px;
+            font-size: 12px;
+            margin-right: 5px;
+        }
+        .opened {
+            background-color: #e8f5e9;
+            border-left: 3px solid #4CAF50;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #ccc;
+        }
+        .tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            background-color: #f1f1f1;
+            border: 1px solid #ccc;
+            border-bottom: none;
+            margin-right: 5px;
+            border-radius: 5px 5px 0 0;
+        }
+        .tab.active {
+            background-color: #fff;
+            border-bottom: 1px solid white;
+            margin-bottom: -1px;
+        }
+        .tab-content {
+            display: none;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-top: none;
+            margin-bottom: 20px;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .filter-controls {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f8f8f8;
+            border-radius: 4px;
+        }
+        .note {
+            padding: 10px;
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            margin-bottom: 15px;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border-left-color: #4CAF50;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 10px;
+            display: none;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .flex-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .flex-row input[type="url"] {
+            margin-bottom: 0;
+        }
+        .flex-grow {
+            flex-grow: 1;
+        }
+        .red-button {
+            background-color: #f44336;
+        }
+        .red-button:hover {
+            background-color: #d32f2f;
+        }
+        .file-input-container {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+        .file-input-container input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+        body.dark-mode {
+    background-color: #181a1b;
+    color: #e0e0e0;
+}
+body.dark-mode textarea,
+body.dark-mode input[type="text"],
+body.dark-mode input[type="url"],
+body.dark-mode input[type="number"] {
+    background-color: #23272a;
+    color: #e0e0e0;
+    border-color: #444;
+}
+body.dark-mode .tab {
+    background-color: #23272a;
+    color: #e0e0e0;
+    border-color: #444;
+}
+body.dark-mode .tab.active {
+    background-color: #181a1b;
+    border-bottom: 1px solid #181a1b;
+}
+body.dark-mode .tab-content {
+    background-color: #23272a;
+    color: #e0e0e0;
+    border-color: #444;
+}
+body.dark-mode .note {
+    background-color: #2a2d2e;
+    border-left-color: #ffc107;
+    color: #e0e0e0;
+}
+body.dark-mode .link-item {
+    background-color: #23272a;
+    border-left-color: #444;
+}
+body.dark-mode .opened {
+    background-color: #1e2e22;
+    border-left-color: #4CAF50;
+}
+body.dark-mode .filter-controls {
+    background-color: #23272a;
+    color: #e0e0e0;
+}
+body.dark-mode #status {
+    background-color: #23272a;
+    border-left-color: #4CAF50;
+    color: #e0e0e0;
+}
+body.dark-mode button {
+    background-color: #333;
+    color: #e0e0e0;
+}
+body.dark-mode button:hover {
+    background-color: #444;
+}
+body.dark-mode .red-button {
+    background-color: #b71c1c;
+}
+body.dark-mode .red-button:hover {
+    background-color: #c62828;
+}
+
+    </style>
+</head>
+<body>
+    <h1>Ultimate Link Extractor & Sequential Opener</h1>
+<button id="darkModeToggle" style="float: right; margin-top: -60px; margin-right: 10px;">🌙 Dark Mode</button>
+
+
+    
+    <div class="tabs">
+        <div class="tab active" data-tab="url-fetch">Fetch from URL</div>
+        <div class="tab" data-tab="html-input">Paste HTML</div>
+        <div class="tab" data-tab="text-input">Paste URLs</div>
+        <div class="tab" data-tab="file-input">Import from File</div>
+    </div>
+    
+    <div id="url-fetch" class="tab-content active">
+        <p>Enter a webpage URL to extract links:</p>
+        <div class="flex-row">
+            <input type="url" id="pageUrl" placeholder="https://example.com" class="flex-grow">
+            <button id="fetchButton">Fetch & Extract Links</button>
+        </div>
+        <div class="note">
+            <strong>Note:</strong> Due to browser security restrictions, this might not work for all websites.
+            If the site has CORS protection enabled, you might need to use one of the other methods instead.
+        </div>
+    </div>
+    
+    <div id="html-input" class="tab-content">
+        <p>Paste HTML content to extract links:</p>
+        <textarea id="htmlContent" placeholder="<html>
+<body>
+<a href='https://example.com'>Example</a>
+<a href='https://example.org'>Another link</a>
+</body>
+</html>"></textarea>
+        <button id="extractHtmlButton">Extract Links from HTML</button>
+    </div>
+    
+    <div id="text-input" class="tab-content">
+        <p>Enter URLs directly (one per line):</p>
+        <textarea id="urlList" placeholder="https://example.com
+https://example.org
+https://example.net"></textarea>
+        <button id="loadUrlsButton">Load URLs to Queue</button>
+    </div>
+    
+    <div id="file-input" class="tab-content">
+        <p>Import links from a file:</p>
+        <div class="flex-row">
+            <div class="file-input-container">
+                <button>Choose File</button>
+                <input type="file" id="fileInput" accept=".txt,.html,.htm,.pdf,.rtf,.doc,.docx">
+            </div>
+            <span id="fileName">No file selected</span>
+        </div>
+        <div class="note">
+            <strong>Supported files:</strong>
+            <ul>
+                <li><strong>Text files (.txt)</strong> – URLs separated by comma, space, or newline</li>
+                <li><strong>HTML files (.html, .htm)</strong> – Extracts all links from HTML</li>
+                <li><strong>PDF files (.pdf)</strong> – Extracts all links from PDF</li>
+                <li><strong>Word files (.doc, .docx)</strong> – Extracts all links from DOC/DOCX</li>
+                <li><strong>RTF files (.rtf)</strong> – Extracts all links from RTF</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div id="status">Ready to extract links.</div>
+    
+    <div class="filter-controls" id="filterControls" style="display: none;">
+        <div class="flex-row">
+            <label for="filterText" style="margin-bottom: 0; margin-right: 10px;">Filter links:</label>
+            <input type="text" id="filterText" placeholder="Filter text..." class="flex-grow">
+            <button id="applyFilterButton" class="small-button">Apply Filter</button>
+            <button id="clearFilterButton" class="small-button">Clear Filter</button>
+        </div>
+    </div>
+    
+    <h3>Links Queue <span id="linkCount"></span></h3>
+    <div class="controls">
+        <div class="control-group">
+            <label for="delayTime">Delay between opening tabs (seconds):</label>
+            <input type="number" id="delayTime" value="2" min="1" max="30">
+        </div>
+        <div class="control-group">
+            <label for="rangeStart">Start #:</label>
+            <input type="number" id="rangeStart" min="1" value="1" style="width: 60px;">
+            <label for="rangeEnd">End #:</label>
+            <input type="number" id="rangeEnd" min="1" value="1" style="width: 60px;">
+        </div>
+        
+        <button id="startButton" disabled>Open All Sequentially</button>
+        <button id="openRangeButton" disabled>Open Range Sequentially</button>
+        <button id="stopButton" disabled>Stop Opening</button>
+        <button id="clearButton" disabled>Clear Queue</button>
+        
+    </div>
+    
+    <div class="link-list" id="linkList">
+        <p>No links extracted yet.</p>
+    </div>
+    
+    <script>
+        
+        // Global variables
+        let allExtractedLinks = [];
+        let filteredLinks = [];
+        let isOpening = false;
+        let timeoutIds = [];
+        let fileReader = new FileReader();
+        
+        // DOM elements
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const fetchButton = document.getElementById('fetchButton');
+        const extractHtmlButton = document.getElementById('extractHtmlButton');
+        const loadUrlsButton = document.getElementById('loadUrlsButton');
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const clearButton = document.getElementById('clearButton');
+        const statusElement = document.getElementById('status');
+        const linkListElement = document.getElementById('linkList');
+        const linkCountElement = document.getElementById('linkCount');
+        const pageUrlElement = document.getElementById('pageUrl');
+        const htmlContentElement = document.getElementById('htmlContent');
+        const urlListElement = document.getElementById('urlList');
+        const fileInputElement = document.getElementById('fileInput');
+        const fileNameElement = document.getElementById('fileName');
+        const filterControlsElement = document.getElementById('filterControls');
+        const filterTextElement = document.getElementById('filterText');
+        const applyFilterButton = document.getElementById('applyFilterButton');
+        const clearFilterButton = document.getElementById('clearFilterButton');
+
+        const rangeStartElement = document.getElementById('rangeStart');
+const rangeEndElement = document.getElementById('rangeEnd');
+const openRangeButton = document.getElementById('openRangeButton');
+
+        
+        // Initialize the application
+        function init() {
+            // Setup event listeners
+            setupTabSwitching();
+            setupEventListeners();
+        }
+        
+        // Setup tab switching functionality
+        function setupTabSwitching() {
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Remove active class from all tabs and contents
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tabContents.forEach(c => c.classList.remove('active'));
+                    
+                    // Add active class to clicked tab and corresponding content
+                    const tabId = tab.getAttribute('data-tab');
+                    tab.classList.add('active');
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+        }
+        
+        // Setup all event listeners
+        function setupEventListeners() {
+            fetchButton.addEventListener('click', fetchUrlAndExtractLinks);
+            extractHtmlButton.addEventListener('click', extractLinksFromHTML);
+            loadUrlsButton.addEventListener('click', loadUrlsFromList);
+            startButton.addEventListener('click', openLinksSequentially);
+            stopButton.addEventListener('click', stopOpening);
+            clearButton.addEventListener('click', clearLinkQueue);
+            applyFilterButton.addEventListener('click', applyFilter);
+            clearFilterButton.addEventListener('click', clearFilter);
+            fileInputElement.addEventListener('change', handleFileSelect);
+            openRangeButton.addEventListener('click', openLinksInRangeSequentially);
+
+        }
+        
+        // Handle file selection
+        async function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    fileNameElement.textContent = file.name;
+    const fileName = file.name.toLowerCase();
+
+    if (fileName.endsWith('.html') || fileName.endsWith('.htm')) {
+        fileReader.onload = function(e) {
+            extractLinksFromHTMLContent(e.target.result);
+        };
+        fileReader.readAsText(file);
+    } else if (fileName.endsWith('.txt')) {
+        fileReader.onload = function(e) {
+            loadUrlsFromText(e.target.result);
+        };
+        fileReader.readAsText(file);
+    } else if (fileName.endsWith('.pdf')) {
+        extractLinksFromPDF(file);
+    } else if (fileName.endsWith('.doc') || fileName.endsWith('.docx')) {
+        extractLinksFromDoc(file);
+    } else if (fileName.endsWith('.rtf')) {
+        extractLinksFromRTF(file);
+    } else {
+        updateStatus('Unsupported file type. Please select .txt, .html, .htm, .pdf, .doc, .docx, or .rtf files.');
+    }
+}
+
+        
+        // Fetch URL and extract links
+        async function fetchUrlAndExtractLinks() {
+            const url = pageUrlElement.value.trim();
+            
+            if (!url) {
+                updateStatus('Please enter a URL.');
+                return;
+            }
+            
+            if (!url.match(/^https?:\/\//i)) {
+                updateStatus('Please enter a valid URL starting with http:// or https://');
+                return;
+            }
+            
+            updateStatus('Fetching webpage content...');
+            
+            try {
+                // Using a CORS proxy to bypass CORS restrictions
+                const corsProxy = 'https://corsproxy.io/?';
+                const response = await fetch(corsProxy + encodeURIComponent(url));
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                
+                const htmlContent = await response.text();
+                extractLinksFromHTMLContent(htmlContent, url);
+                
+            } catch (error) {
+                updateStatus(`Error fetching webpage: ${error.message}. Try using one of the other methods instead.`);
+            }
+        }
+        function extractLinksFromPDF(file) {
+    updateStatus('Extracting links from PDF...');
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const typedarray = new Uint8Array(e.target.result);
+        const pdf = await pdfjsLib.getDocument({data: typedarray}).promise;
+        let text = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            text += content.items.map(item => item.str).join(' ') + '\n';
+        }
+        extractLinksFromTextContent(text);
+        updateStatus('Extracted links from PDF.');
+    };
+    reader.readAsArrayBuffer(file);
+}
+function extractLinksFromDoc(file) {
+    updateStatus('Extracting links from DOC/DOCX...');
+    const docToText = new DocToText();
+    const ext = file.name.split('.').pop().toLowerCase();
+    docToText.extractToText(file, ext)
+        .then(function(text) {
+            extractLinksFromTextContent(text);
+            updateStatus('Extracted links from DOC/DOCX.');
+        })
+        .catch(function(error) {
+            updateStatus('Failed to extract DOC/DOCX: ' + error.message);
+        });
+}
+// You may need to bundle this with Browserify/Webpack, or find a CDN build.
+function extractLinksFromRTF(file) {
+    updateStatus('Extracting links from RTF...');
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const rtfText = e.target.result;
+        // Basic RTF to plain text extraction (for demo; use a library for better results)
+        const plainText = rtfText.replace(/\\par[d]?/g, '\n').replace(/\\'[0-9a-fA-F]{2}/g, '').replace(/{\\[^}]+}/g, '').replace(/[{}\\]/g, '');
+        extractLinksFromTextContent(plainText);
+        updateStatus('Extracted links from RTF.');
+    };
+    reader.readAsText(file);
+}
+function extractLinksFromTextContent(text) {
+    // Simple URL regex
+    const urlRegex = /https?:\/\/[^\s"'<>()]+/g;
+    const matches = text.match(urlRegex) || [];
+    allExtractedLinks = matches.map(url => ({ url, text: url }));
+    // Remove duplicates
+    const seen = new Set();
+    allExtractedLinks = allExtractedLinks.filter(link => {
+        if (seen.has(link.url)) return false;
+        seen.add(link.url);
+        return true;
+    });
+    filteredLinks = [...allExtractedLinks];
+    updateLinkList();
+    updateStatus(`Extracted ${allExtractedLinks.length} links from document.`);
+    enableButtons();
+    filterControlsElement.style.display = 'block';
+}
+
+
+        // Extract links from HTML content
+        function extractLinksFromHTML() {
+            const htmlContent = htmlContentElement.value.trim();
+            
+            if (!htmlContent) {
+                updateStatus('No HTML content provided.');
+                return;
+            }
+            
+            extractLinksFromHTMLContent(htmlContent);
+        }
+        
+        // Extract links from HTML content (shared function)
+        function extractLinksFromHTMLContent(htmlContent, baseUrl = null) {
+            try {
+                // Create a DOM parser
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(htmlContent, 'text/html');
+                
+                // Extract all links
+                const linkElements = doc.querySelectorAll('a[href]');
+                
+                // Process extracted links
+                allExtractedLinks = Array.from(linkElements)
+                    .map(link => {
+                        const href = link.getAttribute('href').trim();
+                        const text = link.textContent.trim() || href;
+                        return { url: href, text: text };
+                    })
+                    .filter(link => {
+                        // Filter out empty links and javascript: links
+                        return link.url && 
+                               !link.url.startsWith('javascript:') && 
+                               !link.url.startsWith('#') &&
+                               !link.url.startsWith('mailto:') &&
+                               !link.url.startsWith('tel:');
+                    });
+                
+                // Apply base URLs to relative links if available
+                // First check if base URL is provided directly, then check if there's a base tag in the HTML
+                let effectiveBaseUrl = baseUrl;
+                
+                if (!effectiveBaseUrl) {
+                    const baseElement = doc.querySelector('base[href]');
+                    effectiveBaseUrl = baseElement ? baseElement.getAttribute('href') : null;
+                }
+                
+                if (effectiveBaseUrl) {
+                    allExtractedLinks = allExtractedLinks.map(link => {
+                        if (!link.url.match(/^(https?:|\/\/)/i)) {
+                            try {
+                                const fullUrl = new URL(link.url, effectiveBaseUrl).href;
+                                return { ...link, url: fullUrl };
+                            } catch (e) {
+                                return link;
+                            }
+                        }
+                        return link;
+                    });
+                }
+                
+                // Remove duplicates
+                const seenUrls = new Set();
+                allExtractedLinks = allExtractedLinks.filter(link => {
+                    if (seenUrls.has(link.url)) {
+                        return false;
+                    }
+                    seenUrls.add(link.url);
+                    return true;
+                });
+                
+                filteredLinks = [...allExtractedLinks];
+                updateLinkList();
+                
+                updateStatus(`Successfully extracted ${allExtractedLinks.length} unique links.`);
+                enableButtons();
+                filterControlsElement.style.display = 'block';
+                
+            } catch (error) {
+                updateStatus(`Error parsing HTML: ${error.message}`);
+            }
+        }
+        
+        // Load URLs from the direct URL input
+        function loadUrlsFromList() {
+            const urlsText = urlListElement.value.trim();
+            
+            if (!urlsText) {
+                updateStatus('No URLs provided.');
+                return;
+            }
+            
+            loadUrlsFromText(urlsText);
+        }
+        
+        // Load URLs from text content (shared function)
+        // function loadUrlsFromText(urlsText) {
+        //     // Process URLs
+        //     allExtractedLinks = urlsText
+        //     .split(/[\s,]+/)
+        //     .map(url => url.trim())
+        //         .filter(url => url !== '' && !url.startsWith('#'))
+        //         .map(url => {
+        //             return { url: url, text: url };
+        //         });
+            
+        //     // Remove duplicates
+        //     const seenUrls = new Set();
+        //     allExtractedLinks = allExtractedLinks.filter(link => {
+        //         if (seenUrls.has(link.url)) {
+        //             return false;
+        //         }
+        //         seenUrls.add(link.url);
+        //         return true;
+        //     });
+            
+        //     filteredLinks = [...allExtractedLinks];
+        //     updateLinkList();
+            
+        //     updateStatus(`Successfully loaded ${allExtractedLinks.length} unique URLs.`);
+        //     enableButtons();
+        //     filterControlsElement.style.display = 'block';
+        // }
+        function loadUrlsFromText(urlsText) {
+    // This regex matches URLs starting with http(s):// or www., even if stuck together or separated by spaces, commas, or newlines
+    const urlRegex = /((?:https?:\/\/|www\.)[^\s,]+)/gi;
+    const matches = urlsText.match(urlRegex) || [];
+    allExtractedLinks = matches.map(url => ({ url: url, text: url }));
+
+    // Remove duplicates
+    const seenUrls = new Set();
+    allExtractedLinks = allExtractedLinks.filter(link => {
+        if (seenUrls.has(link.url)) return false;
+        seenUrls.add(link.url);
+        return true;
+    });
+
+    filteredLinks = [...allExtractedLinks];
+    updateLinkList();
+    updateStatus(`Successfully loaded ${allExtractedLinks.length} unique URLs.`);
+    enableButtons();
+    filterControlsElement.style.display = 'block';
+}
+
+
+        // Update the link list display
+        function updateLinkList() {
+            if (filteredLinks.length === 0) {
+                linkListElement.innerHTML = '<p>No links available.</p>';
+                linkCountElement.textContent = '';
+                rangeEndElement.value = filteredLinks.length;
+
+                return;
+            }
+            
+            linkCountElement.textContent = `(${filteredLinks.length})`;
+            linkListElement.innerHTML = '';
+            
+            filteredLinks.forEach((link, index) => {
+                const linkItem = document.createElement('div');
+                linkItem.className = 'link-item';
+                linkItem.id = `link-${index}`;
+                
+                const linkText = document.createElement('div');
+                linkText.className = 'link-text';
+                
+                // Create truncated display text
+                let displayText = link.text;
+                if (displayText === link.url && displayText.length > 50) {
+                    displayText = displayText.substring(0, 47) + '...';
+                } else if (displayText.length > 100) {
+                    displayText = displayText.substring(0, 97) + '...';
+                }
+                
+                linkText.textContent = `${index + 1}. ${displayText}`;
+                linkText.title = `${link.text} (${link.url})`;
+                
+                const linkActions = document.createElement('div');
+                linkActions.className = 'link-actions';
+                
+                const openButton = document.createElement('button');
+                openButton.textContent = 'Open';
+                openButton.onclick = () => {
+                    openSingleLink(link.url);
+                    linkItem.classList.add('opened');
+                };
+                
+                const removeButton = document.createElement('button');
+                removeButton.textContent = 'Remove';
+                removeButton.className = 'red-button';
+                removeButton.onclick = () => {
+                    filteredLinks.splice(index, 1);
+                    updateLinkList();
+                    updateStatus(`Removed link: ${link.url}`);
+                };
+                
+                linkActions.appendChild(openButton);
+                linkActions.appendChild(removeButton);
+                
+                linkItem.appendChild(linkText);
+                linkItem.appendChild(linkActions);
+                linkListElement.appendChild(linkItem);
+            });
+        }
+        
+        // Open a single link
+        function openSingleLink(url) {
+            let fullUrl = url;
+            if (!url.match(/^https?:\/\//i) && !url.startsWith('//')) {
+                fullUrl = 'http://' + url;
+            }
+            
+            window.open(fullUrl, '_blank');
+        }
+        
+        // Open links sequentially
+        function openLinksSequentially() {
+            if (isOpening || filteredLinks.length === 0) return;
+            
+            // Calculate delay in milliseconds
+            const delaySeconds = parseInt(document.getElementById('delayTime').value) || 2;
+            const delayMs = delaySeconds * 1000;
+            
+            // Update UI
+            isOpening = true;
+            startButton.disabled = true;
+            stopButton.disabled = false;
+            extractHtmlButton.disabled = true;
+            loadUrlsButton.disabled = true;
+            clearButton.disabled = true;
+            fetchButton.disabled = true;
+            
+            updateStatus(`Starting to open ${filteredLinks.length} links with ${delaySeconds} second delay...`);
+            
+            // Open links with delay
+            filteredLinks.forEach((link, index) => {
+                const timeoutId = setTimeout(() => {
+                    // Add http:// if no protocol is specified
+                    let fullUrl = link.url;
+                    if (!link.url.match(/^https?:\/\//i) && !link.url.startsWith('//')) {
+                        fullUrl = 'http://' + link.url;
+                    }
+                    
+                    // Open the URL in a new tab
+                    window.open(fullUrl, '_blank');
+                    
+                    // Update status and highlight opened link
+                    updateStatus(`Opened ${index + 1} of ${filteredLinks.length}: ${link.url}`);
+                    const linkElement = document.getElementById(`link-${index}`);
+                    if (linkElement) {
+                        linkElement.classList.add('opened');
+                    }
+                    
+                    // Clean up when done
+                    if (index === filteredLinks.length - 1) {
+                        finishOpening();
+                    }
+                }, index * delayMs);
+                
+                timeoutIds.push(timeoutId);
+            });
+        }
+        
+        // Stop opening links
+        function stopOpening() {
+            if (!isOpening) return;
+            
+            // Clear all pending timeouts
+            timeoutIds.forEach(id => clearTimeout(id));
+            timeoutIds = [];
+            
+            finishOpening();
+            updateStatus('Opening links was stopped.');
+        }
+        
+        // Finish opening process
+        function finishOpening() {
+            isOpening = false;
+            startButton.disabled = false;
+            stopButton.disabled = true;
+            extractHtmlButton.disabled = false;
+            loadUrlsButton.disabled = false;
+            clearButton.disabled = false;
+            fetchButton.disabled = false;
+        }
+        
+        // Clear the link queue
+        function clearLinkQueue() {
+            allExtractedLinks = [];
+            filteredLinks = [];
+            updateLinkList();
+            disableButtons();
+            filterControlsElement.style.display = 'none';
+            updateStatus('Link queue cleared.');
+        }
+        
+        // Apply text filter to links
+        function applyFilter() {
+            const filterText = filterTextElement.value.toLowerCase().trim();
+            
+            if (!filterText) {
+                clearFilter();
+                return;
+            }
+            
+            filteredLinks = allExtractedLinks.filter(link => {
+                const urlLower = link.url.toLowerCase();
+                const textLower = link.text.toLowerCase();
+                return urlLower.includes(filterText) || textLower.includes(filterText);
+            });
+            
+            updateLinkList();
+            updateStatus(`Filter applied: ${filteredLinks.length} of ${allExtractedLinks.length} links match "${filterText}"`);
+        }
+        
+        // Clear applied filter
+        function clearFilter() {
+            filterTextElement.value = '';
+            filteredLinks = [...allExtractedLinks];
+            updateLinkList();
+            updateStatus(`Filter cleared: Showing all ${allExtractedLinks.length} links.`);
+        }
+        
+        // Update status message
+        function updateStatus(message) {
+            statusElement.textContent = message;
+        }
+        
+        // Enable control buttons
+            function enableButtons() {
+    startButton.disabled = false;
+    clearButton.disabled = false;
+    openRangeButton.disabled = false;
+}
+        
+        // Disable control buttons
+        function disableButtons() {
+    startButton.disabled = true;
+    stopButton.disabled = true;
+    clearButton.disabled = true;
+    openRangeButton.disabled = true;
+}
+
+        
+function openLinksInRangeSequentially() {
+    if (isOpening || filteredLinks.length === 0) return;
+
+    const delaySeconds = parseInt(document.getElementById('delayTime').value) || 2;
+    const delayMs = delaySeconds * 1000;
+
+    // Get and validate range (convert to 0-based index)
+    let start = parseInt(rangeStartElement.value, 10) - 1;
+    let end = parseInt(rangeEndElement.value, 10) - 1;
+
+    // Clamp values to valid range
+    start = Math.max(0, Math.min(start, filteredLinks.length - 1));
+    end = Math.max(0, Math.min(end, filteredLinks.length - 1));
+
+    if (start > end) {
+        updateStatus('Start # must be less than or equal to End #.');
+        return;
+    }
+
+    const rangeLinks = filteredLinks.slice(start, end + 1);
+    if (rangeLinks.length === 0) {
+        updateStatus('No links in selected range.');
+        return;
+    }
+
+    isOpening = true;
+    startButton.disabled = true;
+    openRangeButton.disabled = true;
+    stopButton.disabled = false;
+    extractHtmlButton.disabled = true;
+    loadUrlsButton.disabled = true;
+    clearButton.disabled = true;
+    fetchButton.disabled = true;
+
+    updateStatus(`Starting to open links ${start + 1} to ${end + 1} (${rangeLinks.length} links) with ${delaySeconds} second delay...`);
+
+    rangeLinks.forEach((link, idx) => {
+        const globalIndex = start + idx;
+        const timeoutId = setTimeout(() => {
+            let fullUrl = link.url;
+            if (!link.url.match(/^https?:\/\//i) && !link.url.startsWith('//')) {
+                fullUrl = 'http://' + link.url;
+            }
+            window.open(fullUrl, '_blank');
+            updateStatus(`Opened ${globalIndex + 1} of ${filteredLinks.length}: ${link.url}`);
+            const linkElement = document.getElementById(`link-${globalIndex}`);
+            if (linkElement) {
+                linkElement.classList.add('opened');
+            }
+            if (idx === rangeLinks.length - 1) {
+                finishOpening();
+            }
+        }, idx * delayMs);
+        timeoutIds.push(timeoutId);
+    });
+}
+
+// Dark mode toggle with localStorage
+const darkModeToggle = document.getElementById('darkModeToggle');
+function setDarkMode(enabled) {
+    if (enabled) {
+        document.body.classList.add('dark-mode');
+        darkModeToggle.textContent = '☀️ Light Mode';
+        localStorage.setItem('darkMode', 'enabled');
+    } else {
+        document.body.classList.remove('dark-mode');
+        darkModeToggle.textContent = '🌙 Dark Mode';
+        localStorage.setItem('darkMode', 'disabled');
+    }
+}
+// On load, set mode from localStorage
+setDarkMode(localStorage.getItem('darkMode') === 'enabled');
+darkModeToggle.onclick = () => setDarkMode(!document.body.classList.contains('dark-mode'));
+
+        // Initialize the application
+        init();
+    </script>
+</body>
+</html>
